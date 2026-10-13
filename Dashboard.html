@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Lite - Cadenz Works</title>
+    <style>
+        :root { --main-color: #00ccff; } /* 簡易版は色を変えてもいいかも！ */
+        body { font-family: sans-serif; padding: 20px; background: #1a1a1a; color: white; }
+        .panel { background: #2a2a2a; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        h2 { margin-top: 0; color: var(--main-color); }
+        .req-item { background: #333; padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444; }
+        .title { font-weight: bold; font-size: 18px; color: var(--main-color); }
+        button { padding: 10px 20px; background: var(--main-color); border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-clear { background: #666; margin-left: 10px; }
+        input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #1a1a1a; color: white; width: 60px; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h2>Dashboard Lite</h2>
+        <label>連投制限（分）: </label>
+        <input type="number" id="cool-input" value="3">
+        <button id="save-cfg">設定保存</button>
+        <button id="clear-obs" class="btn-clear">OBS表示消去</button>
+    </div>
+
+    <div id="request-list">読み込み中...</div>
+
+<script type="module">
+    import { firebaseConfig } from "./config.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    onValue(ref(db, 'settings/coolTime'), (s) => { if(s.exists()) document.getElementById('cool-input').value = s.val(); });
+    document.getElementById('save-cfg').onclick = () => set(ref(db, 'settings/coolTime'), document.getElementById('cool-input').value).then(() => alert('更新完了'));
+    document.getElementById('clear-obs').onclick = () => set(ref(db, 'currentSinging'), null);
+
+    window.sing = (key, title, artist) => {
+        set(ref(db, 'currentSinging'), { title, artist, timestamp: Date.now() }).then(() => remove(ref(db, `queue/${key}`)));
+    };
+
+    onValue(ref(db, 'queue'), (snap) => {
+        const list = document.getElementById('request-list');
+        const data = snap.val();
+        list.innerHTML = data ? "" : "<p>リクエストはありません</p>";
+        if(data) Object.entries(data).forEach(([key, req]) => {
+            const div = document.createElement('div');
+            div.className = 'req-item';
+            div.innerHTML = `<div><div class="title">${req.title}</div><div style="font-size:12px; color:#aaa;">${req.artist} / ${req.user}さん</div></div><button onclick="sing('${key}', '${req.title}', '${req.artist}')">歌う</button>`;
+            list.appendChild(div);
+        });
+    });
+</script>
+</body>
+</html>

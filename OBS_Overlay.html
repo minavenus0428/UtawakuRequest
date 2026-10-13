@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root { --main-color: #ff00ff; }
+        body { background: transparent; font-family: sans-serif; color: white; overflow: hidden; }
+        #now-singing { position: absolute; bottom: 50px; left: 50px; background: rgba(0,0,0,0.8); padding: 15px 30px; border-left: 8px solid var(--main-color); border-radius: 0 10px 10px 0; transition: 0.5s; opacity: 0; transform: translateX(-30px); }
+        #now-singing.show { opacity: 1; transform: translateX(0); }
+        #notification { position: absolute; top: 20px; right: 20px; background: var(--main-color); padding: 10px 20px; border-radius: 5px; transition: 0.5s; opacity: 0; transform: translateY(-20px); font-weight: bold; }
+        #notification.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <div id="now-singing">
+        <div style="font-size: 12px; color: var(--main-color);">Now Singing</div>
+        <div id="song-title" style="font-size:32px; font-weight:bold;">-</div>
+        <div id="artist-name" style="font-size: 18px; color: #ccc;">-</div>
+    </div>
+    <div id="notification"><span id="notif-text"></span></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getDatabase, ref, onValue, onChildAdded } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+    const firebaseConfig = { /* FirebaseのConfigをここに貼る */ };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    onValue(ref(db, 'currentSinging'), (s) => {
+        const d = s.val();
+        if (d) {
+            document.getElementById('song-title').innerText = d.title;
+            document.getElementById('artist-name').innerText = d.artist;
+            document.getElementById('now-singing').classList.add('show');
+        } else {
+            document.getElementById('now-singing').classList.remove('show');
+        }
+    });
+
+    let init = false;
+    onChildAdded(ref(db, 'queue'), (s) => {
+        if (!init) return;
+        const d = s.val();
+        const n = document.getElementById('notification');
+        document.getElementById('notif-text').innerText = `${d.user}さんからリクエスト！`;
+        n.classList.add('show');
+        setTimeout(() => n.classList.remove('show'), 5000);
+    });
+    setTimeout(() => init = true, 2000);
+</script>
+</body>
+</html>

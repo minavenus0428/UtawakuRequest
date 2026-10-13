@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>歌枠リクエスト - Cadenz Works Lite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root { --main-color: #00ccff; }
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .card { background: white; padding: 25px; border-radius: 15px; max-width: 400px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; border-left: 5px solid var(--main-color); padding-left: 10px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; background: var(--main-color); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>歌枠リクエスト</h2>
+    <input type="text" id="song" placeholder="曲名（必須）">
+    <input type="text" id="artist" placeholder="アーティスト名">
+    <input type="text" id="user-name" placeholder="あなたの名前">
+    <button id="send">リクエストを送る</button>
+</div>
+
+<script type="module">
+    import { firebaseConfig } from "./config.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    let coolMinutes = 3;
+
+    onValue(ref(db, 'settings/coolTime'), (s) => { if(s.exists()) coolMinutes = s.val(); });
+
+    document.getElementById('send').onclick = () => {
+        const last = localStorage.getItem('lastReq_lite');
+        const now = Date.now();
+        if (last && (now - last < coolMinutes * 60000)) return alert('連投制限中です');
+
+        const title = document.getElementById('song').value;
+        if (!title) return alert('曲名を入力してください');
+
+        push(ref(db, 'queue'), {
+            title,
+            artist: document.getElementById('artist').value || "不明",
+            user: document.getElementById('user-name').value || "匿名",
+            timestamp: now
+        }).then(() => {
+            localStorage.setItem('lastReq_lite', now);
+            alert('リクエストを送信しました！');
+            document.getElementById('song').value = "";
+        });
+    };
+</script>
+</body>
+</html>
